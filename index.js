@@ -179,7 +179,6 @@ app.post('/upload-report', upload.single('report'), async (req, res) => {
       type: 'upload',       // make it publicly accessible
     });
 
-
     const patient = await Patient.findById(req.user._id);
    patient.medicalReports.push({
     title,
@@ -261,7 +260,7 @@ app.post('/docregister', async (req, res) => {
       }
 
       // Generate QR code image and save it temporarily
-      const url = `https://dermapath.onrender.com/connect/${newDoctor.chatLink}`;
+      const url = `http://localhost:10000/connect/${newDoctor.chatLink}`;
       const qrFilePath = path.join(__dirname, 'temp', `${newDoctor._id}-qr.png`);
 
       // Ensure temp folder exists
