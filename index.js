@@ -36,7 +36,7 @@ const router = express.Router();
 
 
 // MongoDB Connection
-mongoose.connect('mongodb://localhost:27017')
+mongoose.connect('mongodb+srv://kedianaitik2006:dAPux89zFb7rWKkD@cluster0.l3nvspt.mongodb.net/')
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error(err));
 
@@ -51,7 +51,7 @@ app.use('/uploads', express.static('uploads'));
 
 // Session
 const sessionStore = MongoStore.create({
-  mongoUrl: 'mongodb://localhost:27017',
+  mongoUrl: 'mongodb+srv://kedianaitik2006:dAPux89zFb7rWKkD@cluster0.l3nvspt.mongodb.net/',
   crypto: { secret: 'your-secret-key' },
   touchAfter: 24 * 3600
 });
@@ -261,7 +261,7 @@ app.post('/docregister', async (req, res) => {
       }
 
       // Generate QR code image and save it temporarily
-      const url = `http://localhost:10000/connect/${newDoctor.chatLink}`;
+      const url = `https://dermapath.onrender.com/connect/${newDoctor.chatLink}`;
       const qrFilePath = path.join(__dirname, 'temp', `${newDoctor._id}-qr.png`);
 
       // Ensure temp folder exists
