@@ -111,9 +111,17 @@
   <% timeline.forEach(chat => { %>
     <div class="timeline-entry">
       <div class="timeline-date">
-        <i class="fa fa-calendar"></i> <%= chat.createdAt.toDateString() %>
-        <i class="fa fa-clock"></i> <%= chat.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) %>
+        <i class="fa fa-calendar"></i> 
+        <%= new Date(chat.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) %>
+        <i class="fa fa-clock"></i> 
+        <%= new Date(chat.createdAt).toLocaleTimeString('en-IN', { 
+              hour: '2-digit', 
+              minute: '2-digit', 
+              hour12: true, 
+              timeZone: 'Asia/Kolkata' 
+          }) %>
       </div>
+
 
       <div class="timeline-bubble">
         <div class="timeline-header">
