@@ -34,7 +34,6 @@ const doctor = require('./models/doctor');
 const upload = multer({ storage });
 const router = express.Router();
 
-
 // MongoDB Connection
 mongoose.connect('mongodb+srv://kedianaitik2006:dAPux89zFb7rWKkD@cluster0.l3nvspt.mongodb.net/')
   .then(() => console.log('MongoDB connected'))
