@@ -38,12 +38,15 @@
       <div class="profile-info">
         <img src="/uploads/doctor.webp" alt="Doctor">
         <div>
-          <h3>Dr.<%= doctor.fullName %></h3>
+          <% 
+            const displayName = doctor.fullName.startsWith('Dr.') ? doctor.fullName : `Dr. ${doctor.fullName}`; 
+          %>
+          <h3><%= displayName %></h3>
           <p><%= doctor.specialization || 'General Practitioner' %></p>
         </div>
       </div>
       <div class="condition-status">
-        <strong>Condition:</strong> Under Treatment
+        <strong>Condition:</strong> Under treatment for <%=illness.illness%>
       </div>
            <div class="appointments">
   <h3>Your Upcoming Appointments</h3>
@@ -186,6 +189,56 @@
         </div>
       </div>
       <p class="no-connection-msg">You are not connected to a doctor. Scan a QR code to begin treatment.</p>
+<section class="card medications">
+  <div class="section-header">
+    <h2>Previous Treatments</h2>
+    <% if (previousTreatments.length > 0) { %>
+      <button id="main-toggle" class="toggle-btn">▼</button>
+    <% } %>
+  </div>
+
+  <% if (previousTreatments.length === 0) { %>
+    <p>No previous treatments found.</p>
+  <% } else { %>
+    <ul id="treatment-list" class="expanded">
+      <% previousTreatments.forEach((treatment, index) => { 
+        const displayName = treatment.doctor.fullName.startsWith('Dr.') ? treatment.doctor.fullName : `Dr. ${treatment.doctor.fullName}`;
+        const medsId = `medications-${index}`;
+      %>
+          <li class="treatment-item">
+            <div class="treatment-header">
+              <p>
+                <strong><%= displayName %></strong> – <%= treatment.illness %> – 
+                <span class="date">
+                  <%= new Date(treatment.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) %>
+                </span>
+                <% if (treatment.medication.length > 0) { %>
+                  <button class="toggle-button" data-target="<%= medsId %>">▼</button>
+                <% } %>
+              </p>
+            </div>
+
+            <div class="medication-container" id="<%= medsId %>" style="display: none;">
+              <h3>Prescribed Medications</h3>
+              <ul>
+                <% treatment.medication.forEach(med => { %>
+                  <li class="medication-item">
+                    <div><strong>Name:</strong> <%= med.name %></div>
+                    <div><strong>Dosage:</strong> <%= med.dosage %></div>
+                    <div><strong>Frequency:</strong> <%= med.frequency %></div>
+                    <div><strong>Duration:</strong> <%= med.duration %></div>
+                  </li>
+                <% }) %>
+              </ul>
+            </div>
+          </li>
+              <% }) %>
+            </ul>
+          </div>
+        </li>
+    </ul>
+  <% } %>
+</section>
     </section>
   <% } %>
 
@@ -325,6 +378,30 @@ document.querySelectorAll('.delete-report-form').forEach(form => {
   });
 });
 </script>
+<script>
+  // Toggle each medication card
+  document.querySelectorAll('.toggle-button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.dataset.target;
+      const target = document.getElementById(targetId);
+      const visible = target.style.display === 'block';
 
+      target.style.display = visible ? 'none' : 'block';
+      btn.textContent = visible ? '▼' : '▲';
+    });
+  });
+
+  // Main toggle for treatment list
+  const mainToggle = document.getElementById('main-toggle');
+  if (mainToggle) {
+    mainToggle.addEventListener('click', () => {
+      const list = document.getElementById('treatment-list');
+      const expanded = list.classList.contains('expanded');
+      list.style.display = expanded ? 'none' : 'block';
+      list.classList.toggle('expanded');
+      mainToggle.textContent = expanded ? '▼' : '▲';
+    });
+  }
+</script>
 </body>
 </html>

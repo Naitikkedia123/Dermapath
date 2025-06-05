@@ -618,3 +618,44 @@ body {
 .download-btn:hover {
   background-color: #0056b3;
 }
+.collapsed {
+  display: none;
+}
+.expanded {
+  display: block;
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  margin-left: auto;
+}
+a{
+  text-decoration: none;
+  color: inherit;
+}
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.toggle-link {
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  color: black;
+}
+.toggle-link:hover {
+  font-size: 0.95rem;
+}
+@media (max-width: 600px) {
+  .toggle-link .label {
+    display: none;
+  }
+  .arrow{
+  color: black;
+}
+}
+

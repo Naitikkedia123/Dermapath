@@ -15,7 +15,10 @@
       <i class="fa-solid fa-arrow-left"></i>
   </div>
   <div class="welcome-section">
-    <h1>Hello, Dr. <%= currentUser.fullName %></h1>
+      <% 
+        const displayName = currentUser.fullName.startsWith('Dr.') ? currentUser.fullName : `Dr. ${currentUser.fullName}`; 
+      %>
+    <h1>Hello, <%= displayName %></h1>
     <p>Your Patient Profile</p>
   </div>
   <div class="logout-btn" onclick="window.location.href='/logout'">
@@ -37,7 +40,7 @@
         </div>
       </div>
       <div class="condition-status">
-        <strong>Condition:</strong> Under Treatment
+        <strong>Condition:</strong> Under treatment for <%=illness.illness%>
       </div>
            <div class="appointments">
   <h3>Your Upcoming Appointments with <%=patient.fullName%></h3>
@@ -63,27 +66,10 @@
       <div class="doctor-actions">
       <a href="/<%=currentUser._id%>/privatechat/<%=patient._id%>?role=Patient" class="button primary">Chat</a>
       <a href="javascript:void(0)" class="button primary" onclick="openPrescriptionForm()">Prescribe Medication</a>
-      <a href="/end-treatment" class="button danger" onclick="return confirmEndTreatment()">End Treatment</a>
+      <a href="/end-treatment/<%=patient._id%>" class="button danger" onclick="return confirmEndTreatment()">End Treatment</a>
 
     </div>
     </section>
-    <section class="card medications">
-  <h2>Patient Reports</h2>
-  <% if (reports.length === 0) { %>
-    <p>No reports uploaded yet.</p>
-  <% } else { %>
-    <ul>
-      <% reports.forEach(report => { %>
-        <li style="display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <strong><%= report.title %></strong> —
-            <a href="<%= report.url %>" target="_blank">View Report</a>
-          </div>
-        </li>
-      <% }) %>
-    </ul>
-  <% } %>
-</section>
     <section class="card medications">
   <h2>Prescribed Medications</h2>
   <% if (medications.length === 0) { %>
@@ -103,6 +89,79 @@
     </ul>
   <% } %>
 </section>
+    <section class="card medications">
+  <div class="section-header">
+    <h2>Patient Reports</h2>
+    <% if (previousTreatments.length > 0) { %>
+    <button id="toggle-btn-report" class="toggle-btn">▼</button>
+    <% } %>
+  </div>
+  <% if (reports.length === 0) { %>
+    <p>No reports uploaded yet.</p>
+  <% } else { %>
+    <ul id="report-list" class="collapsed">
+      <% reports.forEach(report => { %>
+        <li style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <strong><%= report.title %></strong> —
+            <a href="<%= report.url %>" target="_blank">View Report</a>
+          </div>
+        </li>
+      <% }) %>
+    </ul>
+  <% } %>
+</section>
+<section class="card medications">
+  <div class="section-header">
+    <h2>Previous Treatments</h2>
+    <% if (previousTreatments.length > 0) { %>
+      <button id="main-toggle" class="toggle-btn">▼</button>
+    <% } %>
+  </div>
+
+  <% if (previousTreatments.length === 0) { %>
+    <p>No previous treatments found.</p>
+  <% } else { %>
+    <ul id="treatment-list" class="collapsed">
+      <% previousTreatments.forEach((treatment, index) => { 
+        const displayName = treatment.doctor.fullName.startsWith('Dr.') ? treatment.doctor.fullName : `Dr. ${treatment.doctor.fullName}`;
+        const medsId = `medications-${index}`;
+      %>
+          <li class="treatment-item">
+            <div class="treatment-header">
+              <p>
+                <strong><%= displayName %></strong> – <%= treatment.illness %> – 
+                <span class="date">
+                  <%= new Date(treatment.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) %>
+                </span>
+                <% if (treatment.medication.length > 0) { %>
+                  <button class="toggle-button" data-target="<%= medsId %>">▼</button>
+                <% } %>
+              </p>
+            </div>
+
+            <div class="medication-container" id="<%= medsId %>" style="display: none;">
+              <h3>Prescribed Medications</h3>
+              <ul>
+                <% treatment.medication.forEach(med => { %>
+                  <li class="medication-item">
+                    <div><strong>Name:</strong> <%= med.name %></div>
+                    <div><strong>Dosage:</strong> <%= med.dosage %></div>
+                    <div><strong>Frequency:</strong> <%= med.frequency %></div>
+                    <div><strong>Duration:</strong> <%= med.duration %></div>
+                  </li>
+                <% }) %>
+              </ul>
+            </div>
+          </li>
+              <% }) %>
+            </ul>
+          </div>
+        </li>
+    </ul>
+  <% } %>
+</section>
+
 
          <section>
       <div class="timeline-container">
@@ -162,7 +221,7 @@
 
       </div>
       <button type="button" class="button" onclick="addMedicationField()">Add More</button>
-      <button type="submit" class="button primary">Submit</button>
+      <button type="submit" class="button primary" onclick="handleSubmit(this)">Submit</button>
     </form>
   </div>
 </div>
@@ -259,6 +318,57 @@ function addMedicationField() {
 }
 
 </script>
+<script>
+  // Toggle each medication card
+  document.querySelectorAll('.toggle-button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.dataset.target;
+      const target = document.getElementById(targetId);
+      const visible = target.style.display === 'block';
+
+      target.style.display = visible ? 'none' : 'block';
+      btn.textContent = visible ? '▼' : '▲';
+    });
+  });
+
+  // Main toggle for treatment list
+  const mainToggle = document.getElementById('main-toggle');
+  if (mainToggle) {
+    mainToggle.addEventListener('click', () => {
+      const list = document.getElementById('treatment-list');
+      const expanded = list.classList.contains('expanded');
+      list.style.display = expanded ? 'none' : 'block';
+      list.classList.toggle('expanded');
+      mainToggle.textContent = expanded ? '▼' : '▲';
+    });
+  }
+</script>
+
+<script>
+  const toggleBtnreport = document.getElementById('toggle-btn-report');
+  const reportList = document.getElementById('report-list');
+
+  if (toggleBtnreport && reportList) {
+    toggleBtnreport.addEventListener('click', () => {
+      const isCollapsed = reportList.classList.contains('collapsed');
+      reportList.classList.toggle('collapsed');
+      reportList.classList.toggle('expanded');
+      toggleBtnreport.textContent = isCollapsed ? '▲' : '▼';
+    });
+  }
+</script>
+<script>
+  function handleSubmit(button) {
+    button.disabled = true;
+    button.textContent = 'Submitting...';
+    // Optional: Add a small delay to ensure text updates before form submission
+    setTimeout(() => {
+      button.closest('form').submit();
+    }, 50);
+  }
+</script>
+
+
 
 </body>
 </html>

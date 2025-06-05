@@ -11,7 +11,11 @@
 <body>
   <div class="dashboard">
     <div class="header">
-  <h2>Welcome back, Dr. <%= currentUser.fullName %></h2>
+  <% 
+    const displayName = currentUser.fullName.startsWith('Dr.') ? currentUser.fullName : `Dr. ${currentUser.fullName}`; 
+  %>
+  <h2>Welcome back, <%= displayName %></h2>
+
   <div style="display: flex; gap: 1rem;">
     <div class="qr-icon" onclick="openQR()">
       <i class="fas fa-qrcode"></i>
@@ -29,40 +33,53 @@
       <i class="fas fa-filter"></i>
     </div>
 
-   <div class="appointments">
-  <h3>Upcoming Appointments <a href="#">See All →</a></h3>
-  <% if (appointments.length === 0) { %>
-    <p class="no-appointments">No upcoming appointments</p>
-  <% } else { %>
-    <% appointments.forEach(appointment => { %>
-      <div class="appointment-card" data-id="<%= appointment._id %>">
-        <button class="cancel-appointment" title="Cancel Appointment">&times;</button>
-        <div class="appointment-left">
-          <%if(appointment.patient.gender=='male'){%>
-          <img src="/uploads/male.jpg" alt="<%= appointment.patient.fullName %>">
-          <%}else{%>
-            <img src="/uploads/female.jpg" alt="<%= appointment.patient.fullName %>">
-          <%}%>
-          <div class="appointment-info">
-            <strong><i class="fas fa-clock"></i> <%= appointment.time %></strong>
-            <div class="appt-time"><%= appointment.patient.fullName %></div>
-          </div>
-        </div>
-        <div class="appointment-date">
-          <i class="fas fa-calendar-alt"></i>
-          <span><%= new Date(appointment.date).toLocaleDateString('en-GB', {
-            weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
-          }) %></span>
-        </div>
-      </div>
-    <% }) %>
+ <div class="appointments">
+<div class="section-header">
+  <h3>Upcoming Appointments</h3>
+  <% if (appointments.length > 0) { %>
+    <a href="javascript:void(0)" id="toggle-link-appointments" class="toggle-link">
+      <span class="label">See All</span> <span class="arrow">▼</span>
+    </a>
   <% } %>
 </div>
 
 
+  <% if (appointments.length === 0) { %>
+    <p class="no-appointments">No upcoming appointments</p>
+  <% } else { %>
+    <div id="appointment-list" class="collapsed">
+      <% appointments.forEach(appointment => { %>
+        <div class="appointment-card" data-id="<%= appointment._id %>">
+          <button class="cancel-appointment" title="Cancel Appointment">&times;</button>
+          <div class="appointment-left">
+            <% if(appointment.patient.gender == 'male') { %>
+              <img src="/uploads/male.jpg" alt="<%= appointment.patient.fullName %>">
+            <% } else { %>
+              <img src="/uploads/female.jpg" alt="<%= appointment.patient.fullName %>">
+            <% } %>
+            <div class="appointment-info">
+              <strong><i class="fas fa-clock"></i> <%= appointment.time %></strong>
+              <div class="appt-time"><%= appointment.patient.fullName %></div>
+            </div>
+          </div>
+          <div class="appointment-date">
+            <i class="fas fa-calendar-alt"></i>
+            <span><%= new Date(appointment.date).toLocaleDateString('en-GB', {
+              weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
+            }) %></span>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+</div>
+
+
+
     <div class="patients">
-      <h3>Your Patients <a href="#">See All →</a></h3>
+      <h3>Your Patients</h3>
       <% patients.forEach(patient => { %>
+        <%const patientill= illnesses.find(illness => illness.patient.toString() === patient._id.toString()); %>
         <a href="/docpatient/<%=patient._id%>" class="patient-link">
           <div class="patient-card">
             <div class="card-info">
@@ -74,7 +91,7 @@
               <div>
                 <strong><%= patient.fullName %></strong>
                 <small><%= patient.age %> years • <%= patient.gender %> • <%= patient.condition %></small>
-                <small>Last active: <%= patient.lastActiveDisplay %></small>
+                <small>Disease: <%=patientill.illness%></small>
               </div>
             </div>
             <div class="card-status"><%= patient.status %></div>
@@ -173,6 +190,45 @@ if (response.ok) {
   });
 });
   </script>
+  <script>
+  const searchInput = document.querySelector('.search-box input');
+  const patientLinks = document.querySelectorAll('.patient-link');
+
+  searchInput.addEventListener('input', function () {
+    const query = this.value.toLowerCase();
+
+    patientLinks.forEach(link => {
+      const name = link.querySelector('.patient-card strong').textContent.toLowerCase();
+      const condition = link.querySelector('.patient-card small').textContent.toLowerCase();
+
+      if (name.includes(query) || condition.includes(query)) {
+        link.style.display = 'block';
+      } else {
+        link.style.display = 'none';
+      }
+    });
+  });
+</script>
+<script>
+  const toggleLink = document.getElementById('toggle-link-appointments');
+  const appointmentList = document.getElementById('appointment-list');
+  const labelSpan = toggleLink.querySelector('.label');
+  const arrowSpan = toggleLink.querySelector('.arrow');
+
+  if (toggleLink && appointmentList) {
+    toggleLink.addEventListener('click', () => {
+      const isCollapsed = appointmentList.classList.contains('collapsed');
+      appointmentList.classList.toggle('collapsed');
+      appointmentList.classList.toggle('expanded');
+
+      labelSpan.textContent = isCollapsed ? 'See Less' : 'See All';
+      arrowSpan.textContent = isCollapsed ? '▲' : '▼';
+    });
+  }
+</script>
+
+
+
 </body>
 </html>
 

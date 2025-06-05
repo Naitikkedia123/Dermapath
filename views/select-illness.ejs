@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Select Illness</title>
+  <style>
+    :root {
+      --primary: #198754;
+      --accent: #26a69a;
+      --light-border: #b9eac8;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f1fdf9;
+      font-family: "Segoe UI", sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .modal {
+      width: 90%;
+      max-width: 500px;
+      background: white;
+      padding: 30px 20px;
+      border-left: 5px solid var(--accent);
+      border-radius: 16px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+      animation: fadeInUp 0.6s ease;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        transform: translateY(30px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    h2 {
+      text-align: center;
+      color: var(--primary);
+      margin-bottom: 16px;
+      font-size: 22px;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    input[type="text"] {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      outline: none;
+    }
+
+    #illness-list {
+      height: 140px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      padding: 8px;
+      font-size: 15px;
+      width: 100%;
+    }
+
+    .selected-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .tag {
+      background: var(--accent);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 50px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from {opacity: 0; transform: scale(0.9);}
+      to {opacity: 1; transform: scale(1);}
+    }
+
+    .tag .remove {
+      background: white;
+      color: var(--accent);
+      font-weight: bold;
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .summary {
+      margin-top: 12px;
+      font-style: italic;
+      color: #444;
+      font-size: 15px;
+    }
+
+    .buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    button {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      border: none;
+      transition: all 0.3s ease;
+    }
+
+    #not-well-btn {
+      background: #e6f4f1;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+    }
+
+    #not-well-btn:hover {
+      background: #d1f3eb;
+    }
+
+    #confirm-btn {
+      background: var(--primary);
+      color: white;
+    }
+
+    #confirm-btn:hover {
+      background: #157347;
+    }
+
+    @media (max-width: 480px) {
+      .modal {
+        padding: 20px 15px;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+
+      input[type="text"],
+      #illness-list,
+      button {
+        font-size: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="modal">
+    <h2>Select Your Illness</h2>
+    <div class="input-group">
+      <input type="text" id="search" placeholder="Search illness..."/>
+      <select id="illness-list" size="5"></select>
+      <div class="selected-bar" id="selected-bar"></div>
+      <div class="summary" id="summary-text"></div>
+    </div>
+    <div class="buttons">
+      <button id="not-well-btn">Can't find your illness? Choose "Not Well"</button>
+      <button id="confirm-btn">Confirm & Proceed</button>
+    </div>
+  </div>
+
+
+  <script>
+    const illnesses = [
+  // Dermatology
+  "Acne",
+  "Eczema",
+  "Psoriasis",
+  "Rosacea",
+  "Skin Rash",
+  "Hives",
+  "Dermatitis",
+  "Melasma",
+  "Vitiligo",
+  "Fungal Skin Infection",
+  "Warts",
+  "Skin Allergy",
+  "Sunburn",
+  "Cold Sores",
+  "Athlete's Foot",
+  "Scabies",
+  "Ringworm",
+  "Boils",
+  "Dry Skin",
+  "Skin Pigmentation",
+
+  // General/Internal Medicine
+  "Fever",
+  "Cold",
+  "Cough",
+  "Headache",
+  "Body Pain",
+  "Infection",
+  "Sore Throat",
+  "Flu",
+  "Allergy",
+  "Nausea",
+  "Vomiting",
+  "Diarrhea",
+  "Constipation",
+  "Acid Reflux",
+  "Indigestion",
+  "Stomach Ache",
+  "High Blood Pressure",
+  "Diabetes",
+  "Chest Pain",
+  "Dizziness",
+
+  // ENT
+  "Ear Pain",
+  "Hearing Loss",
+  "Nasal Congestion",
+  "Sinus Infection",
+  "Throat Pain",
+  "Tonsillitis",
+  "Runny Nose",
+
+  // Eye-related
+  "Eye Redness",
+  "Itchy Eyes",
+  "Dry Eyes",
+  "Conjunctivitis",
+  "Blurred Vision",
+  "Eye Infection",
+
+  // Mental Health
+  "Anxiety",
+  "Depression",
+  "Insomnia",
+  "Panic Attacks",
+  "Mood Swings",
+  "Irritability",
+
+  // Bones & Muscles
+  "Joint Pain",
+  "Back Pain",
+  "Knee Pain",
+  "Arthritis",
+  "Muscle Cramps",
+  "Neck Pain",
+  "Fracture",
+
+  // Cardiology
+  "Palpitations",
+  "Chest Tightness",
+  "Shortness of Breath",
+  "High Cholesterol",
+
+  // Urology/Gynecology
+  "UTI (Urinary Tract Infection)",
+  "Painful Urination",
+  "Irregular Periods",
+  "Menstrual Cramps",
+  "White Discharge",
+  "Pregnancy-related Issues",
+
+  // Pediatrics
+  "Teething",
+  "Infant Cold",
+  "Vaccination Fever",
+
+  // Default fallback
+  "Not Well"
+];
+
+    const illnessList = document.getElementById('illness-list');
+    const searchInput = document.getElementById('search');
+    const selectedBar = document.getElementById('selected-bar');
+    const summaryText = document.getElementById('summary-text');
+    const notWellBtn = document.getElementById('not-well-btn');
+    const confirmBtn = document.getElementById('confirm-btn');
+
+    let selectedIllnesses = [];
+
+    function updateSummary() {
+      const count = selectedIllnesses.length;
+      if (count === 0) {
+        summaryText.textContent = '';
+        return;
+      }
+      if (count === 1) {
+        summaryText.textContent = selectedIllnesses[0];
+      } else if (count === 2) {
+        summaryText.textContent = `${selectedIllnesses[0]} and ${selectedIllnesses[1]}`;
+      } else {
+        const last = selectedIllnesses.pop();
+        summaryText.textContent = `${selectedIllnesses.join(', ')}, and ${last}`;
+        selectedIllnesses.push(last); // put it back
+      }
+    }
+
+    function renderSelected() {
+      selectedBar.innerHTML = '';
+      selectedIllnesses.forEach((illness, idx) => {
+        const tag = document.createElement('div');
+        tag.className = 'tag';
+        tag.textContent = illness;
+
+        const close = document.createElement('span');
+        close.className = 'remove';
+        close.textContent = '×';
+        close.onclick = () => {
+          selectedIllnesses.splice(idx, 1);
+          renderSelected();
+          updateSummary();
+        };
+
+        tag.appendChild(close);
+        selectedBar.appendChild(tag);
+      });
+      updateSummary();
+    }
+
+    function filterIllnesses(query) {
+      illnessList.innerHTML = '';
+      illnesses
+        .filter(i => i.toLowerCase().includes(query.toLowerCase()))
+        .forEach(i => {
+          const option = document.createElement('option');
+          option.value = i;
+          option.textContent = i;
+          illnessList.appendChild(option);
+        });
+    }
+
+    illnessList.addEventListener('change', e => {
+      const selected = e.target.value;
+      if (!selectedIllnesses.includes(selected)) {
+        selectedIllnesses.push(selected);
+        renderSelected();
+      }
+    });
+
+    searchInput.addEventListener('input', e => {
+      filterIllnesses(e.target.value);
+    });
+
+    notWellBtn.addEventListener('click', () => {
+      selectedIllnesses = ['Not Well'];
+      renderSelected();
+    });
+
+    confirmBtn.addEventListener('click', async () => {
+      if (selectedIllnesses.length === 0) {
+        alert('Please select at least one illness.');
+        return;
+      }
+        let illnessText = '';
+        const count = selectedIllnesses.length;
+        if (count === 1) {
+            illnessText = selectedIllnesses[0];
+        } else if (count === 2) {
+            illnessText = `${selectedIllnesses[0]} and ${selectedIllnesses[1]}`;
+        } else {
+            const last = selectedIllnesses[selectedIllnesses.length - 1];
+            const initial = selectedIllnesses.slice(0, -1);
+            illnessText = `${initial.join(', ')}, and ${last}`;
+        }
+
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Submitting...';
+    
+      const response = await fetch('/submit-illness', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+        illness: illnessText,
+        doctorId: '<%= doctorId %>'
+        })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        window.location.href = '/patient-dashboard?status=connected';
+      } else {
+        alert('Something went wrong');
+      }
+    });
+
+    // Initial load
+    filterIllnesses('');
+  </script>
+</body>
+</html>

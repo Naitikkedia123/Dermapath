@@ -17,6 +17,7 @@ const Chat = require('./models/chat');
 const Timeline = require("./models/timeline");
 const { isLoggedIn, isDoctor, isPatient } = require('./middleware');
 const Report = require('./models/report'); // Assuming you have a Report model
+const Illness = require('./models/illness'); // Assuming you have an Illness model
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -186,7 +187,15 @@ app.post('/upload-report', upload.single('report'), async (req, res) => {
     uploadedAt: new Date(),
   });
     await patient.save();
-
+  Timeline.create({
+      from: req.user._id,
+      to: patient._id,
+      fromModel: 'Patient',
+      toModel: 'Doctor',
+      doctorId: patient.doctors[0], // Assuming the first doctor is the one
+      patientId: req.user._id,
+      caption: `Medical report uploaded: ${title}`,
+    });
     res.redirect('/patient-dashboard');
   } catch (err) {
     console.error(err);
@@ -204,25 +213,40 @@ app.get('/patient', (req, res) => {
 });
 
 app.post('/prescribe-medication', async (req, res) => {
-  const { patientId } = req.body;
-  const medications = Object.values(req.body.medications); // array of meds
-  const doctorId = req.user._id; // assuming user is authenticated doctor
+  const { patientId, illnessName } = req.body;
+  const medications = Object.values(req.body.medications);
+  const doctorId = req.user._id;
 
   try {
+    let illness = await Illness.findOne({ patient: patientId, doctor: doctorId });
+
+    if (!illness) {
+      illness = await Illness.create({
+        patient: patientId,
+        doctor: doctorId,
+        illness: illnessName || 'General Checkup',
+        medication: [] // start empty, push meds later
+      });
+    }
+
     for (let med of medications) {
       await medication.create({
         ...med,
         patient: patientId,
         doctor: doctorId
       });
+
+      illness.medication.push(med);
     }
 
-    res.redirect(`/docpatient/${patientId}`); // redirect to patient profile
+    await illness.save();
+    res.redirect(`/docpatient/${patientId}`);
   } catch (err) {
     console.error(err);
     res.status(500).send('Error saving prescriptions.');
   }
 });
+
 
 
 app.post('/docregister', async (req, res) => {
@@ -383,15 +407,15 @@ app.get('/doctor-dashboard', isDoctor, async (req, res) => {
     const apptDateTime = new Date(`${appt.date}T${appt.time}`);
     return apptDateTime > now;
   });
-
+  const illnesses = await Illness.find({ doctor: req.user._id });
   res.render('doctor-dashboard', {
     currentUser: req.user,
     qrPath,
     patients,
-    appointments
+    appointments,
+    illnesses
   });
 });
-
 
 app.get('/patient-dashboard', isPatient, async (req, res) => {
   const error = req.query.error;
@@ -412,7 +436,9 @@ app.get('/patient-dashboard', isPatient, async (req, res) => {
       );
     });
   }
+ const illness = await Illness.findOne({ patient: req.user._id, doctor: doctorid }).sort({ createdAt: -1 });
   const reports = req.user.medicalReports || [];
+  const previousTreatments = await Illness.find({ patient: req.user._id }).populate('doctor', 'fullName').sort({ createdAt: -1 });
  const timeline = await Timeline.find({ patientId: req.user._id })
   .populate('from', 'fullName role')   // Populate `from` with only fullName
   .populate('to', 'fullName role')     // Populate `to` with only fullName
@@ -425,7 +451,9 @@ app.get('/patient-dashboard', isPatient, async (req, res) => {
     appointments,
     timeline,
     medications,
-    reports
+    reports,
+    illness,
+    previousTreatments
   });
 });
 
@@ -450,13 +478,17 @@ app.get('/docpatient/:id', isDoctor, async (req, res) => {
   .sort({ createdAt: 1 });
     const medications = await medication.find({ patient: patient._id, doctor:req.user._id}).populate('doctor', 'fullName');
     const reports = patient.medicalReports || [];
+    const illness = await Illness.findOne({ patient: patient._id, doctor:req.user._id }).sort({ createdAt: -1 });
+  const previousTreatments = await Illness.find({ patient: patient._id }).populate('doctor', 'fullName').sort({ createdAt: -1 });
     res.render('docpatient', {
       currentUser: req.user,
       patient,
       appointments,
       timeline,
       medications,
-      reports
+      reports,
+      illness,
+      previousTreatments
     });
   } catch (err) {
     console.error(err);
@@ -464,7 +496,46 @@ app.get('/docpatient/:id', isDoctor, async (req, res) => {
   }
 });
 
+app.get('/end-treatment/:id', isDoctor, async (req, res) => {
+  const { id } = req.params;
 
+  try {
+    const patient = await Patient.findById(id);
+    if (!patient) return res.redirect('/doctor-dashboard?error=Patient not found');
+
+    // Remove patient from doctor's list
+    req.user.patients = req.user.patients.filter(p => p.toString() !== patient._id.toString());
+    await req.user.save();
+
+    // Remove doctor from patient's list
+    patient.doctors = patient.doctors.filter(d => d.toString() !== req.user._id.toString());
+    await patient.save();
+
+    // Delete all chats between doctor and patient
+    await Chat.deleteMany({
+      $or: [
+        { from: req.user._id, to: patient._id },
+        { from: patient._id, to: req.user._id }
+      ]
+    });
+
+    // Delete all medications for this patient
+    await medication.deleteMany({ patient: patient._id, doctor: req.user._id });
+
+    // Delete all timelines related to this patient
+    await Timeline.deleteMany({
+      $or: [
+        { from: patient._id, fromModel: 'Patient' },
+        { to: patient._id, toModel: 'Patient' }
+      ]
+    });
+
+    return res.redirect('/doctor-dashboard?success=Treatment ended successfully');
+  } catch (err) {
+    console.error(err);
+    return res.redirect('/doctor-dashboard?error=Something went wrong');
+  }
+});
 app.get('/end-treatment', isPatient, async (req, res) => {
   const patient = req.user;
 
@@ -580,10 +651,43 @@ app.get('/connect/:chatLink', isPatient, async (req, res) => {
       patientId,
       caption: 'Treatment Started',
     });
-    return res.redirect(`/patient-dashboard?status=connected&doctorName=${encodeURIComponent(doctor.fullName)}`);
+    return res.redirect(`/select-illness?doctorId=${doctor._id}`);
   } catch (err) {
     console.error(err);
     return res.redirect('/home?status=error');
+  }
+});
+app.get('/select-illness', isPatient, (req, res) => {
+  const { doctorId } = req.query;
+  res.render('select-illness', { doctorId });
+});
+
+app.post('/submit-illness', isPatient, async (req, res) => {
+  const { doctorId, illness } = req.body;
+  const patientId = req.user._id;
+
+  try {
+    await Illness.create({
+      doctor: doctorId,
+      patient: patientId,
+      illness
+    });
+
+    // Optionally update the timeline too
+    await Timeline.create({
+      from: patientId,
+      to: doctorId,
+      fromModel: 'Patient',
+      toModel: 'Doctor',
+      doctorId,
+      patientId,
+      caption: `Consultation initiated for: ${illness}`
+    });
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
@@ -741,7 +845,15 @@ socket.on("schedule_appointment", async ({ doctorID, patientID, date, time }) =>
         },
       },
     });
-
+    await Timeline.create({
+      from: patientID,
+      to: doctorID,
+      fromModel: 'Patient',
+      toModel: 'Doctor',
+      doctorId: doctorID,
+      patientId: patientID,
+      caption: `Appointment scheduled for ${date} at ${time}`
+    });
     // Update Patient
     await Patient.findByIdAndUpdate(patientID, {
       $push: {
