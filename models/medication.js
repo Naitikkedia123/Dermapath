@@ -32,6 +32,12 @@ const medicationSchema = new Schema({
         required: true,
         trim: true
     },
+    uuid: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true
+    }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Medication', medicationSchema);

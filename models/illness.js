@@ -37,6 +37,12 @@ const illnessSchema = new Schema({
         required: true,
         trim: true
     },
+      uuid: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true
+  },
   }],
 },
   { timestamps: true });

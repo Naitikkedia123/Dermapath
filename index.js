@@ -214,7 +214,7 @@ app.get('/patient', (req, res) => {
 
 app.post('/prescribe-medication', async (req, res) => {
   const { patientId, illnessName } = req.body;
-  const medications = Object.values(req.body.medications);
+  const Medications = Object.values(req.body.medications);
   const doctorId = req.user._id;
 
   try {
@@ -225,19 +225,35 @@ app.post('/prescribe-medication', async (req, res) => {
         patient: patientId,
         doctor: doctorId,
         illness: illnessName || 'General Checkup',
-        medication: [] // start empty, push meds later
+        medication: [],
       });
     }
 
-    for (let med of medications) {
-      await medication.create({
-        ...med,
-        patient: patientId,
-        doctor: doctorId
-      });
+    for (let med of Medications) {
+  const generatedUUID = uuidv4(); // ✅ Generate it once
+  const medWithUUID = {
+    name: med.name,
+    dosage: med.dosage,
+    frequency: med.frequency,
+    duration: med.duration,
+    uuid: generatedUUID,
+    patient: patientId,
+    doctor: doctorId
+  };
 
-      illness.medication.push(med);
-    }
+  // Save in Medication collection
+  await medication.create(medWithUUID);
+
+  // Push into Illness.medication subdocument array
+  illness.medication.push({
+    name: med.name,
+    dosage: med.dosage,
+    frequency: med.frequency,
+    duration: med.duration,
+    uuid: generatedUUID // ✅ Use the stored value
+  });
+}
+
 
     await illness.save();
     res.redirect(`/docpatient/${patientId}`);
@@ -597,6 +613,9 @@ app.post('/logout', (req, res, next) => {
 app.post('/delete-medication/:id', async (req, res) => {
   try {
     const Medication = await medication.findById(req.params.id);
+    const id= Medication.uuid;
+    const illness = await Illness.findOne({ medication: { $elemMatch: { uuid: id } } });
+    await illness.updateOne({ $pull: { medication: { uuid: id } } });
     await medication.findByIdAndDelete(req.params.id);
     res.redirect(`/docpatient/${Medication.patient}`);
   } catch (err) {
